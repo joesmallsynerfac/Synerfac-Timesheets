@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Synerfac — Weekly Timesheet</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --navy:   #1a2e4a;
+  --blue:   #2563a8;
+  --sky:    #e8f1fb;
+  --accent: #e85d3a;
+  --green:  #18805a;
+  --gray0:  #f4f6f9;
+  --gray1:  #eaecf2;
+  --gray2:  #d0d5df;
+  --gray3:  #8a93a6;
+  --gray4:  #4a5468;
+  --text:   #1a2030;
+  --white:  #ffffff;
+  --r:      10px;
+  --sh:     0 2px 14px rgba(26,46,74,.09);
+}
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--gray0);
+  color: var(--text);
+  min-height: 100vh;
+  padding-bottom: 80px;
+}
+
+header {
+  background: var(--navy);
+  padding: 0 32px;
+  display: flex; align-items: center; justify-content: space-between;
+  height: 62px; position: sticky; top: 0; z-index: 100;
+  box-shadow: 0 2px 18px rgba(0,0,0,.28);
+}
+.logo { display: flex; align-items: center; gap: 12px; }
+.logo-mark {
+  width: 34px; height: 34px; border-radius: 7px; background: var(--accent);
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; color: white; font-size: 14px;
+}
+.logo-text { color: white; font-size: 16px; font-weight: 500; }
+.logo-sub  { color: rgba(255,255,255,.4); font-size: 11px; }
+.hdr-right { display: flex; align-items: center; gap: 10px; }
+.week-pill {
+  background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.14);
+  color: rgba(255,255,255,.65); font-size: 12px; font-family: 'DM Mono', monospace;
+  padding: 5px 13px; border-radius: 20px;
+}
+.print-btn {
+  background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.2);
+  color: white; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 500;
+  padding: 6px 14px; border-radius: 7px; cursor: pointer;
+  display: flex; align-items: center; gap: 6px; transition: background .15s;
+}
+.print-btn:hover { background: rgba(255,255,255,.22); }
+
+.page { max-width: 800px; margin: 0 auto; padding: 32px 20px 0; }
+
+.sec-label {
+  font-size: 10.5px; font-weight: 600; letter-spacing: 1.5px;
+  text-transform: uppercase; color: var(--gray3);
+  margin-bottom: 11px; padding-left: 2px;
+}
+
+.card {
+  background: var(--white); border-radius: var(--r);
+  box-shadow: var(--sh); border: 1px solid var(--gray1);
+  margin-bottom: 18px; overflow: hidden;
+}
+.card-body { padding: 22px; }
+
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.field { display: flex; flex-direction: column; gap: 5px; }
+label  { font-size: 11.5px; font-weight: 500; color: var(--gray4); }
+label .req { color: var(--accent); }
+
+input, textarea {
+  font-family: 'DM Sans', sans-serif; font-size: 14px;
+  padding: 9px 13px; border: 1.5px solid var(--gray2); border-radius: 7px;
+  background: white; color: var(--text); outline: none; width: 100%;
+  transition: border-color .15s, box-shadow .15s;
+}
+input:focus, textarea:focus {
+  border-color: var(--blue); box-shadow: 0 0 0 3px rgba(37,99,168,.09);
+}
+input::placeholder { color: var(--gray3); }
+input.err { border-color: var(--accent) !important; }
+.err-msg { font-size: 11px; color: var(--accent); display: none; }
+
+/* Hours table */
+.htable { width: 100%; border-collapse: collapse; }
+.htable thead th {
+  background: var(--navy); color: rgba(255,255,255,.82);
+  font-size: 11px; font-weight: 500; letter-spacing: .7px; text-transform: uppercase;
+  padding: 10px 8px; text-align: center;
+}
+.htable thead th:first-child { text-align: left; padding-left: 16px; width: 130px; }
+.htable tbody td { padding: 5px 5px; border-bottom: 1px solid var(--gray1); vertical-align: middle; }
+.htable tbody tr:last-child td { border-bottom: none; }
+.htable tbody tr.wknd td { background: var(--gray0); }
+
+.day-cell {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 13px; font-weight: 500; color: var(--navy); padding-left: 12px;
+}
+.day-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--gray2); flex-shrink: 0; }
+.wknd .day-dot { background: var(--blue); opacity: .35; }
+
+.ti {
+  font-family: 'DM Mono', monospace; font-size: 13px;
+  padding: 7px 4px; text-align: center; border-radius: 6px;
+}
+.calc-cell {
+  font-family: 'DM Mono', monospace; font-size: 13px; font-weight: 500;
+  text-align: center; border-radius: 6px; padding: 7px 4px; min-width: 54px;
+}
+.reg-calc { color: var(--navy); background: var(--sky); }
+.ot-calc  { color: var(--accent); background: #fef1ec; opacity: .3; }
+.ot-calc.on { opacity: 1; }
+
+.totals {
+  background: var(--navy); border-radius: 8px; display: flex; margin: 14px 16px 16px;
+}
+.tot-item {
+  flex: 1; text-align: center; padding: 14px 8px;
+  border-right: 1px solid rgba(255,255,255,.09);
+}
+.tot-item:last-child { border-right: none; }
+.tot-lbl { font-size: 10px; color: rgba(255,255,255,.4); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 3px; }
+.tot-val { font-family: 'DM Mono', monospace; font-size: 20px; font-weight: 500; color: white; }
+.tot-val.ot  { color: #f5aa8c; }
+.tot-val.all { color: #7dd3b0; }
+
+/* Signatures */
+.sig-block { display: flex; flex-direction: column; gap: 10px; }
+.sig-wrap  { position: relative; }
+canvas.sig {
+  border: 1.5px solid var(--gray2); border-radius: 7px;
+  width: 100%; height: 100px; cursor: crosshair; display: block;
+  background: white; touch-action: none;
+}
+canvas.sig:focus { border-color: var(--blue); outline: none; }
+.sig-hint-overlay {
+  position: absolute; inset: 0; pointer-events: none;
+  display: flex; align-items: center; justify-content: center;
+}
+.sig-hint-txt { font-size: 12px; color: var(--gray3); font-style: italic; transition: opacity .2s; }
+.clear-btn {
+  position: absolute; top: 7px; right: 7px;
+  font-size: 11px; font-family: 'DM Sans', sans-serif;
+  padding: 3px 9px; border-radius: 5px;
+  border: 1px solid var(--gray2); background: white; color: var(--gray3);
+  cursor: pointer; transition: all .15s;
+}
+.clear-btn:hover { border-color: var(--accent); color: var(--accent); }
+.sig-sub { font-size: 11px; color: var(--gray3); }
+
+.actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px; }
+.btn-ghost {
+  padding: 11px 22px; border-radius: 8px; border: 1.5px solid var(--gray2);
+  background: white; color: var(--gray4); font-family: 'DM Sans', sans-serif;
+  font-size: 14px; font-weight: 500; cursor: pointer; transition: all .15s;
+}
+.btn-ghost:hover { border-color: var(--navy); color: var(--navy); }
+.btn-main {
+  padding: 11px 28px; border-radius: 8px; border: none;
+  background: var(--navy); color: white; font-family: 'DM Sans', sans-serif;
+  font-size: 14px; font-weight: 500; cursor: pointer;
+  display: flex; align-items: center; gap: 7px; transition: all .15s;
+}
+.btn-main:hover { background: var(--blue); transform: translateY(-1px); box-shadow: 0 4px 14px rgba(37,99,168,.28); }
+
+/* Complete screen */
+#completeView { display: none; }
+.complete-inner { text-align: center; padding: 48px 32px; }
+.check-ring {
+  width: 68px; height: 68px; border-radius: 50%; background: var(--green);
+  color: white; font-size: 28px; display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 20px; animation: pop .4s cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes pop { from { transform: scale(0); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.complete-h  { font-size: 22px; font-weight: 600; color: var(--navy); margin-bottom: 8px; }
+.complete-p  { font-size: 14px; color: var(--gray3); line-height: 1.6; margin-bottom: 24px; }
+.summary-box {
+  background: var(--sky); border-radius: 9px; padding: 18px 22px;
+  text-align: left; font-size: 13px; color: var(--gray4); line-height: 2;
+  max-width: 440px; margin: 0 auto 28px;
+}
+.summary-box strong { color: var(--navy); font-weight: 600; }
+.complete-btns { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
+
+/* Toggle */
+.sup-toggle { margin-top: 4px; }
+.toggle-label {
+  display: flex; align-items: center; gap: 10px; cursor: pointer; user-select: none;
+}
+.toggle-track {
+  width: 40px; height: 22px; border-radius: 11px; background: var(--gray2);
+  position: relative; flex-shrink: 0; transition: background .2s;
+}
+.toggle-thumb {
+  position: absolute; top: 3px; left: 3px;
+  width: 16px; height: 16px; border-radius: 50%; background: white;
+  transition: left .2s; box-shadow: 0 1px 4px rgba(0,0,0,.2);
+}
+#supPresent:checked ~ .toggle-track { background: var(--green); }
+#supPresent:checked ~ .toggle-track .toggle-thumb { left: 21px; }
+#supPresent { display: none; }
+.toggle-txt { font-size: 13px; font-weight: 500; color: var(--text); }
+.toggle-note { font-size: 11px; color: var(--gray3); margin-top: 5px; }
+.sup-pending {
+  display: flex; align-items: center; gap: 8px;
+  background: #fff8ec; border: 1px solid #f5d98a; border-radius: 7px;
+  padding: 10px 14px; font-size: 12px; color: #8a6a10; margin-top: 10px;
+}
+.sup-pending svg { flex-shrink: 0; stroke: #c49a20; }
+
+@media print {
+  header, .actions, .print-btn, .sec-label, .clear-btn { display: none !important; }
+  body { background: white; }
+  .page { max-width: 100%; padding: 16px; }
+  .card { box-shadow: none; border: 1px solid #ccc; break-inside: avoid; }
+  .htable thead th, .totals { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
+
+@media (max-width: 580px) {
+  .grid2 { grid-template-columns: 1fr; }
+  header { padding: 0 16px; }
+  .week-pill { display: none; }
+  .htable thead th:nth-child(3),
+  .htable tbody td:nth-child(3),
+  .htable thead th:nth-child(4),
+  .htable tbody td:nth-child(4) { display: none; }
+}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-mark">S</div>
+    <div>
+      <div class="logo-text">Synerfac Technical Staffing</div>
+      <div class="logo-sub">Weekly Timesheet</div>
+    </div>
+  </div>
+  <div class="hdr-right">
+    <div class="week-pill" id="weekPill"></div>
+    <button class="print-btn" onclick="savePDF()">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+        <polyline points="6 9 6 2 18 2 18 9"/>
+        <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+        <rect x="6" y="14" width="12" height="8"/>
+      </svg>
+      Print / Save PDF
+    </button>
+  </div>
+</header>
+
+<div class="page">
+
+  <!-- FORM -->
+  <div id="formView">
+
+    <div class="sec-label">Employee Information</div>
+    <div class="card">
+      <div class="card-body">
+        <div class="grid2">
+          <div class="field">
+            <label>Employee Name <span class="req">*</span></label>
+            <input id="empName" type="text" placeholder="Full name">
+            <div class="err-msg" id="e-empName">Please enter your name</div>
+          </div>
+          <div class="field">
+            <label>Week Ending <span class="req">*</span></label>
+            <input id="weekEnd" type="date">
+            <div class="err-msg" id="e-weekEnd">Please select a date</div>
+          </div>
+          <div class="field">
+            <label>Client / Company <span class="req">*</span></label>
+            <input id="client" type="text" placeholder="Company name">
+            <div class="err-msg" id="e-client">Please enter client name</div>
+          </div>
+          <div class="field">
+            <label>Position <span class="req">*</span></label>
+            <input id="position" type="text" placeholder="Your role">
+            <div class="err-msg" id="e-position">Please enter your position</div>
+          </div>
+          <div class="field">
+            <label>Employee Email <span style="color:var(--gray3); font-weight:400;">(optional)</span></label>
+            <input id="empEmail" type="email" placeholder="For your records">
+          </div>
+          <div class="field">
+            <label>Supervisor Name <span class="req">*</span></label>
+            <input id="supName" type="text" placeholder="Approving supervisor">
+            <div class="err-msg" id="e-supName">Please enter supervisor name</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec-label">Hours Worked</div>
+    <div class="card">
+      <table class="htable">
+        <thead>
+          <tr>
+            <th>Day</th>
+            <th>Time In</th>
+            <th>Lunch Out</th>
+            <th>Lunch In</th>
+            <th>Time Out</th>
+            <th>Reg Hrs</th>
+            <th>OT Hrs</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+      <div class="totals">
+        <div class="tot-item"><div class="tot-lbl">Regular</div><div class="tot-val" id="tReg">0.00</div></div>
+        <div class="tot-item"><div class="tot-lbl">Overtime</div><div class="tot-val ot" id="tOT">0.00</div></div>
+        <div class="tot-item"><div class="tot-lbl">Total Hours</div><div class="tot-val all" id="tAll">0.00</div></div>
+      </div>
+    </div>
+
+    <div class="sec-label">Notes</div>
+    <div class="card">
+      <div class="card-body">
+        <div class="field">
+          <label>Additional Notes <span style="color:var(--gray3); font-weight:400;">(optional)</span></label>
+          <textarea id="notes" rows="3" placeholder="Schedule exceptions, project codes, or anything else for this week…"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec-label">Signatures</div>
+    <div class="card">
+      <div class="card-body">
+        <div class="grid2">
+
+          <!-- Employee -->
+          <div class="sig-block">
+            <div class="field">
+              <label>Employee Signature <span class="req">*</span></label>
+              <div class="sig-wrap">
+                <canvas class="sig" id="eSig"></canvas>
+                <div class="sig-hint-overlay"><span class="sig-hint-txt" id="eHint">Sign here</span></div>
+                <button class="clear-btn" type="button" onclick="clearSig('e')">Clear</button>
+              </div>
+              <div class="sig-sub">Draw with mouse or finger</div>
+              <div class="err-msg" id="e-eSig">Signature required</div>
+            </div>
+            <div class="field">
+              <label>Printed Name <span class="req">*</span></label>
+              <input id="ePrint" type="text" placeholder="Print full name">
+              <div class="err-msg" id="e-ePrint">Please print your name</div>
+            </div>
+            <div class="field">
+              <label>Date <span class="req">*</span></label>
+              <input id="eDate" type="date">
+              <div class="err-msg" id="e-eDate">Please enter a date</div>
+            </div>
+          </div>
+
+          <!-- Supervisor -->
+          <div class="sig-block">
+            <div class="field">
+              <label>Supervisor / Client Signature</label>
+              <!-- Toggle -->
+              <div class="sup-toggle" id="supToggleWrap">
+                <label class="toggle-label">
+                  <input type="checkbox" id="supPresent" onchange="toggleSup()">
+                  <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                  <span class="toggle-txt">Supervisor is signing now</span>
+                </label>
+                <p class="toggle-note">Leave off to send PDF to supervisor for approval later</p>
+              </div>
+              <!-- Sig fields — hidden by default -->
+              <div id="supFields" style="display:none; margin-top:10px;">
+                <div class="sig-wrap" style="margin-bottom:10px;">
+                  <canvas class="sig" id="sSig"></canvas>
+                  <div class="sig-hint-overlay"><span class="sig-hint-txt" id="sHint">Sign here</span></div>
+                  <button class="clear-btn" type="button" onclick="clearSig('s')">Clear</button>
+                </div>
+                <div class="sig-sub" style="margin-bottom:10px;">Draw with mouse or finger</div>
+                <div class="err-msg" id="e-sSig" style="margin-bottom:6px;">Signature required</div>
+                <div class="field" style="margin-bottom:10px;">
+                  <label>Printed Name <span class="req">*</span></label>
+                  <input id="sPrint" type="text" placeholder="Print full name">
+                  <div class="err-msg" id="e-sPrint">Please print supervisor name</div>
+                </div>
+                <div class="field">
+                  <label>Date <span class="req">*</span></label>
+                  <input id="sDate" type="date">
+                  <div class="err-msg" id="e-sDate">Please enter a date</div>
+                </div>
+              </div>
+              <!-- Pending box — shown when sup not signing -->
+              <div id="supPending" class="sup-pending">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                Pending supervisor approval — save PDF and forward to supervisor
+              </div>
+            </div>
+          </div>
+
+        </div>
+        <p style="font-size:12px; color:var(--gray3); margin-top:18px; line-height:1.6;">
+          By signing, both parties confirm the hours above are accurate and work was performed satisfactorily during the indicated week.
+          Synerfac employees may not be entrusted with motor vehicles, cash, or valuables without prior written consent from Synerfac.
+        </p>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn-ghost" type="button" onclick="resetAll()">Reset</button>
+      <button class="btn-main" type="button" onclick="submitSheet()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        Complete Timesheet
+      </button>
+    </div>
+
+
+    <!-- Legal -->
+    <div class="sec-label">Client Verification</div>
+    <div class="card">
+      <div class="card-body" style="font-size:13px; color:var(--gray4); line-height:1.8;">
+        <p style="margin-bottom:10px;">The person signing this timesheet certifies they are an authorized representative of the client and certifies that Synerfac employees are not entrusted with any motor vehicles, cash or other valuables without prior written consent from a Synerfac Manager. Client further recognizes Synerfac employees are a valuable asset of Synerfac and client will not employ them directly or indirectly through another firm for at least 90 days after the termination of this assignment without prior written permission from Synerfac.</p>
+        <p style="margin-bottom:10px;">Client also agrees that Synerfac shall not be held liable to client for any act or omission of any individual hired by or referred by client, and client shall assume full responsibility for determining if an individual's qualifications, experiences and references are suitable for the client's employment or staff. Client is responsible for safety training.</p>
+        <p>If client defaults in the performance or observance of any of the terms, conditions or obligations associated with this timesheet including payment for services, and the non-defaulting party obtains a judgement against the defaulting party, then the defaulting party agrees to reimburse the non-defaulting party for reasonable attorney's fees incurred in connection therewith.</p>
+      </div>
+    </div>
+
+  </div><!-- /formView -->
+
+  <!-- COMPLETE -->
+  <div id="completeView">
+    <div class="card">
+      <div class="complete-inner">
+        <div class="check-ring">✓</div>
+        <div class="complete-h">Timesheet Complete</div>
+        <div class="complete-p" id="completeSub"></div>
+        <div class="summary-box" id="summaryBox"></div>
+        <div class="complete-btns">
+          <button class="btn-ghost" type="button" onclick="newSheet()">New Timesheet</button>
+          <button class="btn-main" type="button" onclick="savePDF()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+              <polyline points="6 9 6 2 18 2 18 9"/>
+              <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+              <rect x="6" y="14" width="12" height="8"/>
+            </svg>
+            Print / Save PDF
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// Default dates
+(function(){
+  const d = new Date(), day = d.getDay();
+  const fri = new Date(d);
+  fri.setDate(d.getDate() + (day <= 5 ? 5 - day : 6));
+  document.getElementById('weekPill').textContent =
+    'Week ending ' + fri.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+  document.getElementById('weekEnd').value = fri.toISOString().split('T')[0];
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('eDate').value = today;
+  document.getElementById('sDate').value = today;
+})();
+
+// Build days
+const DAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+const hrs = new Array(7).fill(0);
+
+DAYS.forEach((name, i) => {
+  const tr = document.createElement('tr');
+  if (i >= 5) tr.className = 'wknd';
+  tr.innerHTML = `
+    <td><div class="day-cell"><div class="day-dot"></div>${name}</div></td>
+    <td><input class="ti" type="time" id="in${i}" onchange="calc(${i})"></td>
+    <td><input class="ti" type="time" id="lo${i}" onchange="calc(${i})"></td>
+    <td><input class="ti" type="time" id="li${i}" onchange="calc(${i})"></td>
+    <td><input class="ti" type="time" id="out${i}" onchange="calc(${i})"></td>
+    <td><div class="calc-cell reg-calc" id="reg${i}">—</div></td>
+    <td><div class="calc-cell ot-calc"  id="ot${i}">—</div></td>
+  `;
+  document.getElementById('tbody').appendChild(tr);
+});
+
+function mins(t){ if(!t) return null; const[h,m]=t.split(':').map(Number); return h*60+m; }
+
+function calc(i){
+  const inV  = mins(document.getElementById('in'+i).value);
+  const outV = mins(document.getElementById('out'+i).value);
+  const loV  = mins(document.getElementById('lo'+i).value);
+  const liV  = mins(document.getElementById('li'+i).value);
+  const rEl  = document.getElementById('reg'+i);
+  const oEl  = document.getElementById('ot'+i);
+  if(inV===null||outV===null||outV<=inV){
+    rEl.textContent='—'; oEl.textContent='—'; oEl.classList.remove('on');
+    hrs[i]=0; updateTotals(); return;
+  }
+  let w = outV - inV;
+  if(loV!==null && liV!==null && liV>loV) w -= (liV-loV);
+  w = Math.max(0, w);
+  hrs[i] = w/60;
+  rEl.textContent = (w/60).toFixed(2);
+  updateTotals();
+}
+
+function updateTotals(){
+  const total = hrs.reduce((a,b)=>a+b,0);
+  const reg = Math.min(total,40), ot = Math.max(0,total-40);
+  document.getElementById('tReg').textContent = reg.toFixed(2);
+  document.getElementById('tOT').textContent  = ot.toFixed(2);
+  document.getElementById('tAll').textContent = total.toFixed(2);
+  let cum = 0;
+  hrs.forEach((h,i)=>{
+    const oEl = document.getElementById('ot'+i);
+    if(!h){ oEl.textContent='—'; oEl.classList.remove('on'); return; }
+    cum += h;
+    const dayOT = Math.max(0, cum-40);
+    if(dayOT>0){ oEl.textContent=dayOT.toFixed(2); oEl.classList.add('on'); }
+    else { oEl.textContent='—'; oEl.classList.remove('on'); }
+  });
+}
+
+// Signatures
+function initSig(id, hintId){
+  const cv   = document.getElementById(id);
+  const hint = document.getElementById(hintId);
+  const dpr  = window.devicePixelRatio || 1;
+  function resize(){
+    const r = cv.getBoundingClientRect();
+    cv.width  = Math.round(r.width  * dpr);
+    cv.height = Math.round(r.height * dpr);
+    const ctx = cv.getContext('2d');
+    ctx.scale(dpr, dpr);
+    ctx.strokeStyle='#1a2e4a'; ctx.lineWidth=2;
+    ctx.lineCap='round'; ctx.lineJoin='round';
+  }
+  resize();
+  let drawing = false;
+  function getCtx(){ return cv.getContext('2d'); }
+  function pos(e){
+    const r = cv.getBoundingClientRect();
+    const s = e.touches ? e.touches[0] : e;
+    return [s.clientX - r.left, s.clientY - r.top];
+  }
+  function down(e){
+    e.preventDefault(); drawing=true;
+    const ctx=getCtx(); const[x,y]=pos(e);
+    ctx.beginPath(); ctx.moveTo(x,y);
+    hint.style.opacity='0';
+  }
+  function move(e){
+    if(!drawing) return; e.preventDefault();
+    const ctx=getCtx(); const[x,y]=pos(e);
+    ctx.lineTo(x,y); ctx.stroke();
+  }
+  function up(){ drawing=false; }
+  cv.addEventListener('mousedown', down);
+  cv.addEventListener('mousemove', move);
+  cv.addEventListener('mouseup', up);
+  cv.addEventListener('mouseleave', up);
+  cv.addEventListener('touchstart', down, {passive:false});
+  cv.addEventListener('touchmove',  move, {passive:false});
+  cv.addEventListener('touchend', up);
+}
+initSig('eSig','eHint');
+initSig('sSig','sHint');
+
+function clearSig(p){
+  const cv = document.getElementById(p+'Sig');
+  const r  = cv.getBoundingClientRect();
+  cv.getContext('2d').clearRect(0,0,r.width,r.height);
+  document.getElementById(p+'Hint').style.opacity='1';
+}
+function sigEmpty(id){
+  const cv=document.getElementById(id);
+  return !cv.getContext('2d').getImageData(0,0,cv.width,cv.height).data.some(v=>v!==0);
+}
+
+// Validation
+function chk(id, errId, fn){
+  const el=document.getElementById(id), msg=document.getElementById(errId);
+  const ok=fn(el.value);
+  el.classList.toggle('err',!ok); msg.style.display=ok?'none':'block';
+  if(!ok) el.addEventListener('input',()=>{el.classList.remove('err');msg.style.display='none';},{once:true});
+  return ok;
+}
+
+function toggleSup(){
+  const on = document.getElementById('supPresent').checked;
+  document.getElementById('supFields').style.display  = on ? 'block' : 'none';
+  document.getElementById('supPending').style.display = on ? 'none'  : 'flex';
+}
+// Init pending state
+window.addEventListener('DOMContentLoaded', ()=>{ toggleSup(); });
+
+function submitSheet(){
+  let ok = true;
+  ok = chk('empName','e-empName', v=>v.trim().length>1) && ok;
+  ok = chk('weekEnd','e-weekEnd', v=>v.length>0)        && ok;
+  ok = chk('client', 'e-client',  v=>v.trim().length>1) && ok;
+  ok = chk('position','e-position',v=>v.trim().length>1)&& ok;
+  ok = chk('supName','e-supName', v=>v.trim().length>1) && ok;
+  ok = chk('ePrint', 'e-ePrint',  v=>v.trim().length>1) && ok;
+  ok = chk('eDate',  'e-eDate',   v=>v.length>0)        && ok;
+  const supNow = document.getElementById('supPresent').checked;
+  if(supNow){
+    ok = chk('sPrint','e-sPrint', v=>v.trim().length>1) && ok;
+    ok = chk('sDate', 'e-sDate',  v=>v.length>0)        && ok;
+    const sE=sigEmpty('sSig');
+    document.getElementById('e-sSig').style.display = sE?'block':'none';
+    if(sE) ok=false;
+  }
+
+  const eE=sigEmpty('eSig');
+  document.getElementById('e-eSig').style.display = eE?'block':'none';
+  if(eE) ok=false;
+
+  if(hrs.reduce((a,b)=>a+b,0)===0){
+    alert('Please enter at least one day of hours.'); ok=false;
+  }
+
+  if(!ok){ document.querySelector('.err')?.scrollIntoView({behavior:'smooth',block:'center'}); return; }
+
+  // Build summary
+  const we    = new Date(document.getElementById('weekEnd').value+'T12:00:00');
+  const weFmt = we.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
+  const total = hrs.reduce((a,b)=>a+b,0);
+  const reg   = Math.min(total,40), ot = Math.max(0,total-40);
+
+  const dayLines = DAYS.map((d,i)=>{
+    if(!hrs[i]) return '';
+    return `<strong>${d}:</strong> ${document.getElementById('in'+i).value} – ${document.getElementById('out'+i).value} &nbsp;(${hrs[i].toFixed(2)} hrs)`;
+  }).filter(Boolean).join('<br>');
+
+  document.getElementById('summaryBox').innerHTML = `
+    <strong>Employee:</strong> ${document.getElementById('empName').value}<br>
+    <strong>Client:</strong> ${document.getElementById('client').value} — ${document.getElementById('position').value}<br>
+    <strong>Supervisor:</strong> ${document.getElementById('supName').value}<br>
+    <strong>Week ending:</strong> ${weFmt}<br>
+    <br>${dayLines}<br>
+    <br><strong>Regular:</strong> ${reg.toFixed(2)} hrs &emsp; <strong>OT:</strong> ${ot.toFixed(2)} hrs &emsp; <strong>Total:</strong> ${total.toFixed(2)} hrs
+    ${document.getElementById('notes').value ? '<br><br><strong>Notes:</strong> '+document.getElementById('notes').value : ''}
+    <br><br><strong>Employee signed:</strong> ${document.getElementById('ePrint').value}, ${document.getElementById('eDate').value}<br>
+    \${document.getElementById('supPresent').checked
+      ? '<strong>Supervisor signed:</strong> '+document.getElementById('sPrint').value+', '+document.getElementById('sDate').value
+      : '<strong>Supervisor approval:</strong> <em>Pending — forward PDF to supervisor</em>'}
+  `;
+
+  const supSigned = document.getElementById('supPresent').checked;
+  document.getElementById('completeSub').textContent = supSigned
+    ? 'Both signatures captured. Print or save as PDF and email to jsmall@synerfac.com.'
+    : 'Employee signature captured. Print or save as PDF and forward to the supervisor for approval, then send to jsmall@synerfac.com.';
+  document.getElementById('formView').style.display    = 'none';
+  document.getElementById('completeView').style.display = 'block';
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function resetAll(){
+  if(!confirm('Reset the form? All data will be cleared.')) return;
+  document.querySelectorAll('input, textarea').forEach(el=>el.value='');
+  hrs.fill(0);
+  DAYS.forEach((_,i)=>{
+    document.getElementById('reg'+i).textContent='—';
+    const o=document.getElementById('ot'+i); o.textContent='—'; o.classList.remove('on');
+  });
+  ['tReg','tOT','tAll'].forEach(id=>document.getElementById(id).textContent='0.00');
+  clearSig('e'); clearSig('s');
+  // Restore defaults
+  const fri = new Date(); const day=fri.getDay();
+  fri.setDate(fri.getDate()+(day<=5?5-day:6));
+  document.getElementById('weekEnd').value = fri.toISOString().split('T')[0];
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('eDate').value = today;
+  document.getElementById('sDate').value = today;
+}
+
+function newSheet(){
+  document.getElementById('completeView').style.display = 'none';
+  document.getElementById('formView').style.display     = 'block';
+  resetAll();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function savePDF(){
+  const empName = document.getElementById('empName').value || 'Timesheet';
+  const weekEnd = document.getElementById('weekEnd').value || '';
+  const filename = 'Synerfac_Timesheet_' + empName.replace(/\s+/g,'_') + (weekEnd ? '_'+weekEnd : '') + '.pdf';
+
+  const el = document.getElementById('formView').style.display !== 'none'
+    ? document.getElementById('formView')
+    : document.getElementById('completeView');
+
+  const opt = {
+    margin:       [10, 10, 10, 10],
+    filename:     filename,
+    image:        { type: 'jpeg', quality: 0.98 },
+    html2canvas:  { scale: 2, useCORS: true, logging: false },
+    jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+  };
+
+  // Temporarily show a full-page version for PDF capture
+  const clone = document.getElementById('formView').cloneNode(true);
+  clone.style.display = 'block';
+  clone.style.position = 'fixed';
+  clone.style.top = '-9999px';
+  clone.style.width = '794px';
+  clone.style.background = 'white';
+  clone.style.zIndex = '-1';
+  document.body.appendChild(clone);
+
+  html2pdf().set(opt).from(clone).save().then(()=>{
+    document.body.removeChild(clone);
+  });
+}
+</script>
+</body>
+</html>
